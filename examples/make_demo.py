@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Write a made-up Claude Code session to profile, for the README screenshot and for trying the tool.
+"""Write a made-up Claude Code session to profile, for the README screenshots and for trying the tool.
 
 The session ("Add CSV export to the orders page") has two subagents, a background test run,
-a question that waits for the user, a side session started from the desktop app and a
-follow-up prompt. Nothing in it comes from a real session.
+a short question to the user and a side session started from the desktop app. Its second
+prompt merges the branch, and one background run of the full test suite takes 47 of that
+prompt's 49 minutes, the pattern the profiler is best at revealing. Nothing in it comes
+from a real session.
 
     python3 examples/make_demo.py /tmp/sp-demo
     CLAUDE_CONFIG_DIR=/tmp/sp-demo/claude CLAUDE_DESKTOP_SESSIONS_DIR=/tmp/sp-demo/desktop \\
@@ -94,19 +96,19 @@ def main(out: Path) -> None:
                         "The orders page fetches through src/api/orders.ts (listOrders with filter params). No export helper exists yet.")
     main.call(t(2.4), 0.6, "Read", {"file_path": "src/pages/orders/OrdersPage.tsx"})
     main.call(t(2.6), 0.4, "Read", {"file_path": "src/api/orders.ts"})
-    main.call(t(2.9), 236, "AskUserQuestion", {"questions": [{"question": "Which columns should the export include?"}]},
+    main.call(t(2.9), 48, "AskUserQuestion", {"questions": [{"question": "Which columns should the export include?"}]},
               "User answered: all visible columns plus the customer email.")
-    main.call(t(7.0), 0.5, "Edit", {"file_path": "src/api/orders.ts", "description": "Stream orders page by page"})
+    main.call(t(4.0), 0.5, "Edit", {"file_path": "src/api/orders.ts", "description": "Stream orders page by page"})
     main.call(t(7.4), 0.4, "Write", {"file_path": "src/api/exportCsv.ts"})
     main.call(t(7.9), 0.5, "Edit", {"file_path": "src/pages/orders/OrdersPage.tsx", "description": "Add the Export CSV button"})
-    tests = main.call(t(8.3), 0.8, "Bash", {"command": "npm test -- --runInBand", "description": "Run the full test suite", "run_in_background": True},
+    tests = main.call(t(8.3), 0.8, "Bash", {"command": "npm test -- export", "description": "Run the export tests", "run_in_background": True},
                       "Command running in background with ID: b7k2")
     main.call(t(8.6), 35, "Bash", {"command": "npx tsc --noEmit", "description": "Type-check the project"})
     review = main.call(t(9.4), 152, "Agent", {"description": "Review the CSV export change", "subagent_type": "code-reviewer",
                                                "prompt": "Review the CSV export change for correctness and large-export behaviour."},
                        "One issue: the export buffers every row in memory. Stream it instead.")
     main.call(t(12.0), 0.6, "Edit", {"file_path": "src/api/exportCsv.ts", "description": "Stream rows instead of buffering"})
-    main.notice(t(12.6), tests, "b7k2", "completed", 'Background command "Run the full test suite" completed (exit code 0)')
+    main.notice(t(12.6), tests, "b7k2", "completed", 'Background command "Run the export tests" completed (exit code 0)')
     main.call(t(12.8), 92, "Bash", {"command": "npm run build", "description": "Build the app"})
     main.say(t(14.4), "The orders page now has an Export CSV button that streams filtered rows. Tests and build pass. "
                       "I started a side session to write the release notes.")
@@ -123,14 +125,24 @@ def main(out: Path) -> None:
     main.call(t(17.8), 0.4, "Read", {"file_path": "CHANGELOG.md"})
     main.say(t(18.2), "The release notes are in CHANGELOG.md.")
 
-    # Prompt 2 after a break.
-    main.prompt(t(26.0), "Looks good. Add the same export to the invoices page.")
-    main.call(t(26.2), 0.5, "Read", {"file_path": "src/pages/invoices/InvoicesPage.tsx"})
-    main.call(t(26.6), 0.5, "Edit", {"file_path": "src/pages/invoices/InvoicesPage.tsx", "description": "Reuse exportCsv for invoices"})
-    main.call(t(27.0), 118, "Bash", {"command": "npm test -- invoices", "description": "Run the invoice tests"})
-    main.call(t(29.2), 0.4, "Edit", {"file_path": "src/pages/invoices/InvoicesPage.tsx", "description": "Fix the date column format"})
-    main.call(t(29.5), 64, "Bash", {"command": "npm test -- invoices", "description": "Rerun the invoice tests"})
-    main.say(t(30.8), "The invoices page has the same export; its tests pass.")
+    # Prompt 2 after a break: merge the branch. One background run of the full test suite
+    # takes 47 of the prompt's 49 minutes while the agent has nothing else to do.
+    main.prompt(t(26.0), "Merge the CSV export branch into main and clean up the worktree.")
+    main.call(t(26.1), 4, "Bash", {"command": "git status && git worktree list", "description": "Inspect the main checkout and the worktree"})
+    main.call(t(26.3), 3, "Bash", {"command": "git merge main", "description": "Merge main into the feature branch"},
+              "CONFLICT (content): Merge conflict in CHANGELOG.md")
+    main.call(t(26.45), 1, "Bash", {"command": "git diff --name-only --diff-filter=U", "description": "Show the conflicting files"})
+    main.call(t(26.55), 0.5, "Edit", {"file_path": "CHANGELOG.md", "description": "Resolve the changelog conflict keeping both entries"})
+    main.call(t(26.8), 2, "Bash", {"command": "git commit --no-edit", "description": "Commit the merge"})
+    suite = main.call(t(27.0), 0.8, "Bash", {"command": "npm test", "description": "Run the full test suite after the merge", "run_in_background": True},
+                      "Command running in background with ID: c4m9")
+    main.call(t(27.2), 5, "Bash", {"command": "git status --ignored --short", "description": "List files only in the worktree"})
+    main.call(t(27.5), 28, "Bash", {"command": "diff -rq .cache ../main/.cache", "description": "Compare build caches with main"})
+    main.notice(t(74.1), suite, "c4m9", "completed", 'Background command "Run the full test suite after the merge" completed (exit code 0)')
+    main.call(t(74.25), 1, "Bash", {"command": "tail -20 test-results.log", "description": "Check the test results"})
+    main.call(t(74.4), 12, "Bash", {"command": "git -C ../main merge --ff-only csv-export", "description": "Fast-forward main to the feature branch"})
+    main.call(t(74.7), 10, "Bash", {"command": "git worktree remove ../csv-export", "description": "Remove the feature worktree"})
+    main.say(t(75.1), "Merged into main and removed the worktree. All 1,284 tests pass.")
     main.write(project / f"{MAIN}.jsonl")
     side.write(project / f"{SIDE}.jsonl")
 

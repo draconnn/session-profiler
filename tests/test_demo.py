@@ -50,17 +50,23 @@ class DemoSessionTest(IsolatedTest):
         self.assertEqual(self.rows[make_demo.SIDE]["parentId"], make_demo.MAIN)
         self.assertEqual(sorted(agent["parentId"] for agent in self.detail["agents"][1:]), [make_demo.MAIN] * 3)
 
-    def test_background_job(self) -> None:
-        jobs = self.events("job")
-        self.assertEqual(len(jobs), 1)
-        self.assertEqual(jobs[0]["summary"], "Run the full test suite")
-        self.assertEqual(jobs[0]["durationMs"], 4 * 60_000 + 18_000)
-        self.assertEqual(jobs[0]["status"], "completed")
-        self.assertEqual((self.summary["backgroundJobCount"], self.summary["backgroundJobOpenCount"]), (1, 0))
+    def test_background_jobs(self) -> None:
+        jobs = {job["summary"]: job for job in self.events("job")}
+        self.assertEqual(sorted(jobs), ["Run the export tests", "Run the full test suite after the merge"])
+        self.assertEqual(jobs["Run the export tests"]["durationMs"], 4 * 60_000 + 18_000)
+        self.assertEqual(jobs["Run the full test suite after the merge"]["durationMs"], 47 * 60_000 + 6_000)
+        self.assertEqual({job["status"] for job in jobs.values()}, {"completed"})
+        self.assertEqual((self.summary["backgroundJobCount"], self.summary["backgroundJobOpenCount"]), (2, 0))
+
+    def test_one_step_takes_most_of_the_merge_prompt(self) -> None:
+        merge = [turn for turn in self.main["turns"] if turn.get("kind") != "wake"][1]
+        self.assertEqual(merge["endMs"] - merge["startMs"], 49 * 60_000 + 6_000)
+        suite = next(job for job in self.events("job") if job["summary"] == "Run the full test suite after the merge")
+        self.assertTrue(merge["startMs"] <= suite["startMs"] and suite["endMs"] <= merge["endMs"])
 
     def test_question_waits_for_the_user(self) -> None:
         [question] = [event for event in self.events("tool") if event["label"] == "AskUserQuestion"]
-        self.assertEqual(question["durationMs"], 3 * 60_000 + 56_000)
+        self.assertEqual(question["durationMs"], 48_000)
 
     def test_idle_wait_before_wake_up_is_not_active(self) -> None:
         [wait] = self.events("wait")
@@ -88,6 +94,6 @@ class DemoSessionTest(IsolatedTest):
     def test_time_breakdown_adds_up_to_wall_span(self) -> None:
         parts = self.summary["timeBreakdown"]
         wall = self.detail["wallDurationMs"]
-        self.assertEqual(wall, 30 * 60_000 + 48_000)
+        self.assertEqual(wall, 75 * 60_000 + 6_000)
         self.assertEqual(parts["workingMs"] + parts["backgroundOnlyMs"] + parts["nothingRunningMs"], wall)
         self.assertGreater(parts["nothingRunningMs"], 0)

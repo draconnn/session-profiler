@@ -311,6 +311,13 @@ async function main() {
   try { fromHash = decodeURIComponent((location.hash.match(/session=([^&]+)/) || [])[1] || ''); } catch { /* a malformed %-escape: fall back to the default session */ }
   const p = state.profile;
   state.sessionId = (fromHash && p.details?.[fromHash] ? fromHash : '') || p.selectedSessionId || p.sessions?.[0]?.id || '';
+  // #prompt=N opens the report on the session's Nth prompt, as numbered in the Prompt picker.
+  const promptNumber = +((location.hash.match(/prompt=(\d+)/) || [])[1] || 0);
+  if (promptNumber) {
+    const agents = p.details?.[state.sessionId]?.agents || [], root = agents.find(a => a.id === state.sessionId) || agents[0];
+    const turn = (root?.turns || []).filter(t => t.kind !== 'wake')[promptNumber - 1];
+    if (turn) state.turnId = turn.id;
+  }
   renderAll();
 }
 
