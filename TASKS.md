@@ -10,6 +10,9 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 - [x] Bug: Codex commands recorded with under 1 ms (start-up only, ~64% of commands) take the span of the exec call that ran them when that call ran nothing else; otherwise their duration is unknown.
 - [x] Numbers match the old dashboard on session 0c06d6c0 (Claude Code) and Codex chat 01a14abf, apart from the two bug fixes; screenshots before/after.
 
+- [x] Publishable repo: Claude Code plugin (`.claude-plugin/`, `skills/session-profiler/`) next to the Codex skill, README, MIT licence; Claude Code reports kept out of `~/.codex` (`~/.cache/session-profiler/`).
+- [ ] Published as a public GitHub repo `draconnn/session-profiler`; plugin installs from it in a clean Claude Code config.
+
 ## Assumed
 - `timing.js` moves to `web/` unchanged apart from times shown in the viewer's own time zone (was hard-coded Europe/Warsaw).
 - Plugin-only extras are dropped: Publish, Ask ChatGPT, edit pencil, card menus (export, links), card dragging.
@@ -28,4 +31,4 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 - In subagent transcripts the notice is itself an entry, so two cleanup notices a few ms apart could make the second look not-quiet and get a days-long end (no live case yet); leave notice entries out of `entry_times`.
 - The `duration_only` timing code has no label on the page.
 - A Codex command record written late can land inside the next exec call's window and take that call's span (seen once).
-- Publishing: one repo with both skill entries and one-command installs, README, MIT licence, synthetic test transcripts, demo session and screenshots, X post.
+- Synthetic test transcripts for the parsers; demo session and screenshots for the README and the X post.

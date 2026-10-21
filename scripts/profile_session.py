@@ -244,6 +244,18 @@ def summarize(profile, root):
     }
 
 
+def runtime_root(source):
+    # Where report runtimes live. Codex chats keep Codex's own temp folder; other sources use
+    # a cache folder so Claude Code users don't get a ~/.codex folder. SESSION_PROFILER_HOME overrides both.
+    configured = os.environ.get('SESSION_PROFILER_HOME')
+    if configured:
+        return Path(configured).expanduser().resolve() / source
+    if source == 'codex':
+        return Path(os.environ.get('CODEX_HOME', str(Path.home() / '.codex'))).expanduser().resolve() / '.tmp/session-profiler/v1'
+    cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache').expanduser().resolve()
+    return cache / 'session-profiler' / source
+
+
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     select_group = cli.add_mutually_exclusive_group()
@@ -261,8 +273,7 @@ def main():
         print(json.dumps({'matchCount': len(found), 'sessions': [brief(r) for r in found[:25]]}, ensure_ascii=False))
         return 0
     selected, root = select(rows, args.session, args.query, os.environ, args.source)
-    codex_home = Path(os.environ.get('CODEX_HOME', str(Path.home() / '.codex'))).expanduser().resolve()
-    runtime = codex_home / '.tmp/session-profiler' / ('v1' if args.source == 'codex' else f'v1-{args.source}') / root
+    runtime = runtime_root(args.source) / root
     runtime.mkdir(parents=True, exist_ok=True)
     # Serialize repeated requests for this chat, while other chats remain independent.
     with (runtime / '.launch.lock').open('a') as lock:

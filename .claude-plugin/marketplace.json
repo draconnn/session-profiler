@@ -1,0 +1,15 @@
+{
+  "name": "session-profiler",
+  "description": "Session profiler for Claude Code and Codex: a local timeline of where a session's time went.",
+  "owner": {
+    "name": "draconnn",
+    "url": "https://github.com/draconnn"
+  },
+  "plugins": [
+    {
+      "name": "session-profiler",
+      "source": "./",
+      "description": "See where the time went in a Claude Code or Codex session: an interactive local timeline of prompts, subagents, side sessions, tool calls, waits and background jobs."
+    }
+  ]
+}

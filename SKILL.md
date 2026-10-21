@@ -22,7 +22,7 @@ python3 scripts/profile_session.py --list --query "part of the chat title"
 python3 scripts/profile_session.py --session SESSION_UUID
 ```
 
-`--source claude` reads Claude Code transcripts (`~/.claude/projects`) instead, and `--source all` reads both; the Claude Code skill at `~/.claude/skills/session-profiler` uses this code.
+`--source claude` reads Claude Code transcripts (`~/.claude/projects`) instead, and `--source all` reads both; the Claude Code plugin in this repository (`skills/session-profiler/`) uses this code.
 
 Do not assume that “this session” means the most recently updated chat. If current-session environment metadata is absent, use the available thread tools/context to identify it. The helper reports ambiguous title matches rather than choosing silently. Ask the user only if the intended session remains materially ambiguous. A selected child is resolved to its top-level chat and includes available descendants; the returned JSON identifies both IDs.
 

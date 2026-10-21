@@ -1,0 +1,10 @@
+{
+  "name": "session-profiler",
+  "version": "0.1.0",
+  "description": "See where the time went in a Claude Code or Codex session: an interactive local timeline of prompts, subagents, side sessions, tool calls, waits and background jobs.",
+  "author": { "name": "draconnn", "url": "https://github.com/draconnn" },
+  "homepage": "https://github.com/draconnn/session-profiler",
+  "repository": "https://github.com/draconnn/session-profiler",
+  "license": "MIT",
+  "keywords": ["profiling", "timing", "sessions", "subagents", "codex"]
+}
