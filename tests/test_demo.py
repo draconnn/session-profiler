@@ -43,12 +43,12 @@ class DemoSessionTest(IsolatedTest):
         return [event for agent in self.detail["agents"] for event in agent["events"] if event["kind"] == kind]
 
     def test_subagents_and_side_session(self) -> None:
-        self.assertEqual(self.summary["subagentCount"], 3)
+        self.assertEqual(self.summary["subagentCount"], 5)
         self.assertEqual(self.main["id"], make_demo.MAIN)
         self.assertEqual(self.agents["Write release notes"]["id"], make_demo.SIDE)
         self.assertEqual(self.agents["Write release notes"]["parentId"], make_demo.MAIN)
         self.assertEqual(self.rows[make_demo.SIDE]["parentId"], make_demo.MAIN)
-        self.assertEqual(sorted(agent["parentId"] for agent in self.detail["agents"][1:]), [make_demo.MAIN] * 3)
+        self.assertEqual(sorted(agent["parentId"] for agent in self.detail["agents"][1:]), [make_demo.MAIN] * 5)
 
     def test_background_jobs(self) -> None:
         jobs = {job["summary"]: job for job in self.events("job")}

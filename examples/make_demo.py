@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write a made-up Claude Code session to profile, for the README screenshots and for trying the tool.
 
-The session ("Add CSV export to the orders page") has two subagents, a background test run,
+The session ("Add CSV export to the orders page") has four subagents, a background test run,
 a short question to the user and a side session started from the desktop app. Its second
 prompt merges the branch, and one background run of the full test suite takes 47 of that
 prompt's 49 minutes, the pattern the profiler is best at revealing. Nothing in it comes
@@ -126,7 +126,7 @@ def main(out: Path) -> None:
     main.say(t(18.2), "The release notes are in CHANGELOG.md.")
 
     # Prompt 2 after a break: merge the branch. One background run of the full test suite
-    # takes 47 of the prompt's 49 minutes while the agent has nothing else to do.
+    # takes 47 of the prompt's 49 minutes; two short subagents run meanwhile, then nothing does.
     main.prompt(t(26.0), "Merge the CSV export branch into main and clean up the worktree.")
     main.call(t(26.1), 4, "Bash", {"command": "git status && git worktree list", "description": "Inspect the main checkout and the worktree"})
     main.call(t(26.3), 3, "Bash", {"command": "git merge main", "description": "Merge main into the feature branch"},
@@ -138,6 +138,12 @@ def main(out: Path) -> None:
                       "Command running in background with ID: c4m9")
     main.call(t(27.2), 5, "Bash", {"command": "git status --ignored --short", "description": "List files only in the worktree"})
     main.call(t(27.5), 28, "Bash", {"command": "diff -rq .cache ../main/.cache", "description": "Compare build caches with main"})
+    changes = main.call(t(28.1), 95, "Agent", {"description": "Check what changed on main", "subagent_type": "Explore",
+                                                "prompt": "List what landed on main since the branch started and anything that could clash with the CSV export."},
+                        "Two commits landed on main: a date-format helper and a changelog entry. Nothing touches the export code.")
+    summary = main.call(t(30.0), 150, "Agent", {"description": "Draft the pull request summary", "subagent_type": "general-purpose",
+                                                 "prompt": "Write a short summary of the CSV export work for the merge commit and the team channel."},
+                        "Summary drafted in .git/MERGE_SUMMARY.md.")
     main.notice(t(74.1), suite, "c4m9", "completed", 'Background command "Run the full test suite after the merge" completed (exit code 0)')
     main.call(t(74.25), 1, "Bash", {"command": "tail -20 test-results.log", "description": "Check the test results"})
     main.call(t(74.4), 12, "Bash", {"command": "git -C ../main merge --ff-only csv-export", "description": "Fast-forward main to the feature branch"})
@@ -165,6 +171,24 @@ def main(out: Path) -> None:
     reviewer.call(t(10.3), 41, "Bash", {"command": "npm test -- export", "description": "Run the export tests"})
     reviewer.say(t(11.8), "One issue: the export buffers every row in memory. Stream it instead.")
     reviewer.write(subagents / "agent-b9c3.jsonl")
+    checker = Transcript(MAIN, sidechain=True, agent="c2d7")
+    checker.prompt(t(28.12), "List what landed on main since the branch started and anything that could clash with the CSV export.")
+    checker.call(t(28.3), 2.4, "Bash", {"command": "git log --oneline csv-export..main", "description": "List commits on main since the branch"})
+    checker.call(t(28.6), 1.6, "Bash", {"command": "git diff --stat csv-export...main", "description": "See which files they touched"})
+    checker.call(t(29.0), 0.5, "Read", {"file_path": "src/utils/dates.ts"})
+    checker.say(t(29.6), "Two commits landed on main: a date-format helper and a changelog entry. Nothing touches the export code.")
+    checker.write(subagents / "agent-c2d7.jsonl")
+    (subagents / "agent-c2d7.meta.json").write_text(json.dumps({"agentType": "Explore", "description": "Check what changed on main",
+                                                                "toolUseId": changes, "model": "claude-haiku-5-5"}))
+    writer = Transcript(MAIN, sidechain=True, agent="d4e1")
+    writer.prompt(t(30.02), "Write a short summary of the CSV export work for the merge commit and the team channel.")
+    writer.call(t(30.2), 1.8, "Bash", {"command": "git log --oneline main..csv-export", "description": "List the branch's commits"})
+    writer.call(t(30.6), 0.5, "Read", {"file_path": "CHANGELOG.md"})
+    writer.call(t(31.9), 0.4, "Write", {"file_path": ".git/MERGE_SUMMARY.md"})
+    writer.say(t(32.4), "Summary drafted in .git/MERGE_SUMMARY.md.")
+    writer.write(subagents / "agent-d4e1.jsonl")
+    (subagents / "agent-d4e1.meta.json").write_text(json.dumps({"agentType": "general-purpose", "description": "Draft the pull request summary",
+                                                                "toolUseId": summary, "model": MODEL}))
     (subagents / "agent-b9c3.meta.json").write_text(json.dumps({"agentType": "code-reviewer", "description": "Review the CSV export change",
                                                                 "toolUseId": review, "model": MODEL}))
 

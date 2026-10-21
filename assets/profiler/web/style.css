@@ -49,4 +49,3 @@ body{margin:0;background:var(--background);color:var(--text);font:14px/1.5 syste
 .sp-what-toggle{border:none;background:none;padding:0;font-size:10px;color:var(--chart-1);cursor:pointer}
 .sp-tool-label.job{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.35}
 .sp-controls>.sp-field select{width:100%}.sp-controls>.sp-field:not(.sp-session-select){flex:0 1 230px}
-@media(min-width:1200px){.sp-stats{grid-template-columns:repeat(6,1fr)}}
