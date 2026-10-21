@@ -68,7 +68,7 @@ Background jobs are work that keeps running after its call returned:
   - A notice that names the user, the main session, Claude or the background time limit is a real end.
 - **Codex:** an `exec` script that outlives its call (the call returns "Script running with cell ID N"), timed from the `exec` call to the output of the `wait` that saw the cell finish. A cell no `wait` saw finish stays open. Its own commands and tool items are still timed separately, so the job is not added to tool time.
 
-`backgroundJobCount` counts all background jobs and `backgroundJobOpenCount` those with an unknown end; `backgroundJobMs` (overlaps once) and `longestBackgroundJobs` cover only jobs with a known end. Builds, reels and test runs usually live here, often during idle waits, so report them with the actions: they are frequently the real time sink.
+`backgroundJobCount` counts all background jobs and `backgroundJobOpenCount` those with an unknown end; `backgroundJobMs` (overlaps once) and `longestBackgroundJobs` cover only jobs with a known end. Builds and test runs usually live here, often during idle waits, so report them with the actions: they are frequently the real time sink.
 
 Distinguish elapsed time from summed parallel work:
 - Overlapping agents and tool calls must not be added together and presented as session duration.

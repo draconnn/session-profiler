@@ -1,15 +1,25 @@
 # session-profiler
 
-See where the time went in a **Claude Code** or **Codex** session.
+**Your agent took 40 minutes. Where did the time go?**
 
-It reads the session logs already on your machine and opens a local report: a timeline of every prompt, subagent, side session, tool call, wait and background job, with what each one did and how long it took.
+Was it the model thinking, a slow test suite, a subagent going down a rabbit hole, or the agent sitting there waiting for you to answer a question? session-profiler shows you, for any **Claude Code** session or **Codex** chat, from the logs already on your machine.
 
-- **Both tools in one view.** Claude Code sessions and Codex chats use the same report.
-- **Subagents and side sessions.** Subagents, and side sessions started from the Claude desktop app, are nested under the session that started them.
-- **Waiting is not working.** Time spent waiting for you, or for another session to report back, is shown as a wait and left out of working time.
-- **Background commands are timed to the end.** A build or test run left in the background counts until it actually finishes, not just until the agent moved on.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/report-dark.png">
+  <img alt="A session profiler report: summary figures, then a timeline with one lane per agent showing active turns, tool calls, a background test run and a wait for the user" src="docs/report-light.png">
+</picture>
 
-It only reads files and never changes them. The report is served on `127.0.0.1`, so it stays on your machine.
+Ask your agent to "profile this session" and you get a report like this one. At a glance you can see:
+
+- **How much of the session was real work.** It splits the session into the agent working, only background jobs running, and nothing running (waiting for you, or idle).
+- **What every agent did, on one timeline.** The main session, its subagents and the side sessions it started each get a lane, so you can see what ran in parallel and what held things up.
+- **The slowest steps, by name.** Test runs, builds, searches and questions to you are ranked by the time they took, and every bar opens the exact command or prompt behind it.
+- **Background work, timed to the end.** A test suite or build left running in the background counts until it actually finished, not just until the agent moved on.
+- **Time spent waiting for you.** A question you took four minutes to answer shows up as exactly that, not as the agent being slow.
+
+<img alt="Time by action and the action explorer: actions ranked by total time, and every action with its start time, duration, agent and command" src="docs/actions-light.png">
+
+The report runs on your own machine: it only reads your local logs and is served on `127.0.0.1`. Nothing is uploaded. The session in these screenshots is a made-up demo ([`examples/make_demo.py`](examples/make_demo.py)), not a real one.
 
 ## Install
 
@@ -78,6 +88,14 @@ It prints JSON with the report `url`, a `summary` and the path to the full data 
 
 Reports are written to `~/.cache/session-profiler/` for Claude Code and to `$CODEX_HOME/.tmp/session-profiler/` for Codex. Set `SESSION_PROFILER_HOME` to put them somewhere else. Reports contain prompts, commands and output excerpts from your sessions, so treat screenshots of them like the sessions themselves.
 
+## How it works
+
+The skill runs a small Python helper that reads the session logs, works out the timings and starts a local web server for the report.
+
+- **Both tools in one view.** Claude Code sessions and Codex chats use the same report.
+- **Subagents and side sessions.** Subagents, and side sessions started from the Claude desktop app, are nested under the session that started them.
+- **Waiting is not working.** Time spent waiting for you, or for another session to report back, is shown as a wait and left out of working time.
+
 ## How times are measured
 
 - **Working time** is the union of active turns: from a prompt (or a wake-up message from the app) to the last entry before the next one. Parallel work counts once.
@@ -100,6 +118,7 @@ The log formats it reads are not documented and can change with any app update. 
 | `assets/profiler/web/` | The report page: plain HTML, CSS and JavaScript |
 | `.claude-plugin/` | Claude Code plugin and marketplace manifests |
 | `.codex-plugin/`, `.agents/plugins/` | Codex plugin and marketplace manifests |
+| `examples/make_demo.py` | Writes the made-up demo session used for the screenshots |
 
 The timing helpers have tests: `node --test assets/profiler/web/timing.test.mjs` (Node.js is needed only for the tests).
 

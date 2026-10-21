@@ -87,7 +87,7 @@ function renderSummary() {
   $('summary').innerHTML = `<div class="sp-stats">${[
     stat('Time range', duration(rangeMs), 'First to last recorded activity; the next three add up to it'),
     stat(`${app} working`, duration(activeMs), `Active turns, overlaps once; tool calls ${duration(callMs)} of it`),
-    stat('Only background jobs running', duration(jobsOnlyMs), `${app} idle while builds, tests or reels ran`),
+    stat('Only background jobs running', duration(jobsOnlyMs), `${app} idle while builds or tests ran`),
     stat('Nothing running', duration(quietMs), 'Waiting for you, or idle'),
     stat('Subagents', String(scoped.filter(a => a.id !== root?.id).length), `${prompts} recorded prompts in session`),
     stat('Recorded actions', String(calls.length), unknown ? `${unknown} have unknown duration` : 'Tools, waits and compactions'),
