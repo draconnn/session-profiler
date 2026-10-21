@@ -69,6 +69,12 @@ class Handler(SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
+    def do_HEAD(self):
+        if not self.allowed():
+            self.send_error(403)
+            return
+        super().do_HEAD()
+
     def do_POST(self):
         origin = self.headers.get("Origin")
         expected = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}

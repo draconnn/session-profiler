@@ -5,7 +5,7 @@ import {actionText,agentStats,clock,dateTime,duration,excerpt,groupKey,isJob,isW
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hue = e => e.kind==='compaction'?'compact':isJob(e)?'job':isWait(e)?'wait':'tool';
-const timingLabel = t => ({native_duration:'Recorded execution duration',native_interval:'Recorded start and end',native_timestamps:'Recorded start and end',recorded_duration:'Recorded execution duration',paired_timestamps:'Paired call and result timestamps',transcript_pair:'Paired call and result timestamps',notification_pair:'From launch to its completion notice',cell_pair:'From launch to the wait that saw it finish',exec_span:'From the exec call to its output (Codex recorded only the start-up time)',startup_only:'Unknown: Codex recorded only the start-up time, and the command shared its exec call with other actions',inferred:'Estimated from transcript timestamps',transcript_gap:'Gap between two transcript entries',observed:'A single recorded moment',record_interval:'From the call to its result record',derived_from_duration:'Recorded duration, placed at its recorded start or end',record_timestamp_duration:'Recorded duration, ending when it was recorded',record_timestamp:'A single recorded moment',unknown:'Unknown'}[t]||t||'Timing provenance unavailable');
+const timingLabel = t => ({native_duration:'Recorded execution duration',native_interval:'Recorded start and end',native_timestamps:'Recorded start and end',recorded_duration:'Recorded execution duration',paired_timestamps:'Paired call and result timestamps',transcript_pair:'Paired call and result timestamps',notification_pair:'From launch to its completion notice',cell_pair:'From launch to the wait that saw it finish',exec_span:'From the exec call to its output (Codex recorded only the start-up time)',startup_only:'Unknown: Codex recorded only the start-up time, and the command shared its exec call with other actions',inferred:'Estimated from transcript timestamps',transcript_gap:'Gap between two transcript entries',observed:'A single recorded moment',record_interval:'From the call to its result record',derived_from_duration:'Recorded duration, placed at its recorded start or end',duration_only:'Recorded duration, with no recorded start or end',record_timestamp_duration:'Recorded duration, ending when it was recorded',record_timestamp:'A single recorded moment',unknown:'Unknown'}[t]||t||'Timing provenance unavailable');
 const keyOf = e => `${e.agentId}\u001f${e.id}`;
 const PAGE = 40;
 
@@ -307,7 +307,8 @@ async function main() {
   } catch (e) {
     notice(e.message); return;
   }
-  const fromHash = decodeURIComponent((location.hash.match(/session=([^&]+)/) || [])[1] || '');
+  let fromHash = '';
+  try { fromHash = decodeURIComponent((location.hash.match(/session=([^&]+)/) || [])[1] || ''); } catch { /* a malformed %-escape: fall back to the default session */ }
   const p = state.profile;
   state.sessionId = (fromHash && p.details?.[fromHash] ? fromHash : '') || p.selectedSessionId || p.sessions?.[0]?.id || '';
   renderAll();

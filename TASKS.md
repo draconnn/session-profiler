@@ -15,6 +15,9 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 
 - [x] Codex plugin (`.codex-plugin/`, `.agents/plugins/marketplace.json`) next to the Claude Code plugin; one shared skill in `skills/session-profiler/` (root `SKILL.md` removed, so a Codex clone no longer lists two skills); helper `--source auto` follows the running tool.
 
+- [x] Tests and CI: `tests/` (standard-library `unittest`) runs the whole pipeline on the made-up demo session and checks the bug-prone rules on tiny synthetic transcripts (killed/stopped Claude jobs, Codex start-up-only commands, Codex cells finished by a later `wait`, the server's Host check); `.github/workflows/test.yml` runs them on ubuntu and macOS with Python 3.11 and 3.13, plus the Node timing tests.
+- [x] Fixed: a malformed `#session=` address no longer leaves the page blank; `duration_only` timing has a label; notice entries in subagent transcripts no longer count as activity (`entry_times`); `launch.py` checks the Host header on HEAD requests too.
+
 ## Assumed
 - `timing.js` moves to `web/` unchanged apart from times shown in the viewer's own time zone (was hard-coded Europe/Warsaw).
 - Plugin-only extras are dropped: Publish, Ask ChatGPT, edit pencil, card menus (export, links), card dragging.
@@ -26,11 +29,6 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 (none)
 
 ## Later
-- A malformed `#session=` address (bad %-escape) leaves the page blank; catch the decode error in `web/app.js`.
 - A start-up-only Codex command whose record lands after its exec call's first output still shows 0 ms instead of unknown (1 case seen).
-- `launch.py` does not check the Host header on HEAD requests (only static page headers exposed).
 - A plain "was stopped" notice for a subagent's job that a timer killed (e.g. exactly 60 min after launch) is treated as cleanup, so two real 60-min jobs show an unknown end; consider a later notice for the same id, or round-hour caps.
-- In subagent transcripts the notice is itself an entry, so two cleanup notices a few ms apart could make the second look not-quiet and get a days-long end (no live case yet); leave notice entries out of `entry_times`.
-- The `duration_only` timing code has no label on the page.
 - A Codex command record written late can land inside the next exec call's window and take that call's span (seen once).
-- Synthetic test transcripts for the parsers; demo session and screenshots for the README and the X post.

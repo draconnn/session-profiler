@@ -1,5 +1,7 @@
 # session-profiler
 
+[![Tests](https://github.com/draconnn/session-profiler/actions/workflows/test.yml/badge.svg)](https://github.com/draconnn/session-profiler/actions/workflows/test.yml)
+
 **Your agent took 40 minutes. Where did the time go?**
 
 Was it the model thinking, a slow test suite, a subagent going down a rabbit hole, or the agent sitting there waiting for you to answer a question? session-profiler shows you, for any **Claude Code** session or **Codex** chat, from the logs already on your machine.
@@ -119,8 +121,9 @@ The log formats it reads are not documented and can change with any app update. 
 | `.claude-plugin/` | Claude Code plugin and marketplace manifests |
 | `.codex-plugin/`, `.agents/plugins/` | Codex plugin and marketplace manifests |
 | `examples/make_demo.py` | Writes the made-up demo session used for the screenshots |
+| `tests/` | Tests for the log readers and the report pipeline, on made-up inputs only |
 
-The timing helpers have tests: `node --test assets/profiler/web/timing.test.mjs` (Node.js is needed only for the tests).
+Tests: `python3 -m unittest discover -s tests` (standard library only) and `node --test assets/profiler/web/timing.test.mjs` (Node.js is needed only for this one). GitHub Actions runs them on every push (Python on Linux and macOS).
 
 ## Licence
 

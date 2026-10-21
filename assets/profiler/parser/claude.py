@@ -282,14 +282,15 @@ def claude_inventory(home: Path | None = None) -> list[dict[str, Any]]:
     return rows
 
 
-def _entries(path: Path, sidechain: bool) -> tuple[list[tuple[int, dict[str, Any]]], list[str], dict[str, str], dict[str, tuple[int, int, str]]]:
+def _entries(path: Path, sidechain: bool) -> tuple[list[tuple[int, dict[str, Any]]], list[str], dict[str, str], dict[str, tuple[int, int, str]], set[int]]:
     """Timed user/assistant entries (with line numbers), warnings, title records,
-    and background-task notifications by tool-use id: (ms, line, notice text).
+    background-task notifications by tool-use id: (ms, line, notice text), and the
+    lines that carry a notification.
     A notification is timed when the app queued it (``queue-operation``
     ``enqueue``), which is when the task ended; it may reach the transcript as a
     message much later, or only inside another entry."""
 
-    entries, warnings, titles, notices = [], [], {}, {}
+    entries, warnings, titles, notices, notice_lines = [], [], {}, {}, set()
     try:
         with path.open("r", encoding="utf-8", errors="replace") as stream:
             for number, line in enumerate(stream, 1):
@@ -316,7 +317,11 @@ def _entries(path: Path, sidechain: bool) -> tuple[list[tuple[int, dict[str, Any
                     attached = entry.get("attachment") if isinstance(entry.get("attachment"), Mapping) else {}
                     text = (entry.get("content") if queued else attached.get("prompt") if kind == "attachment"
                             else _text_from_content((entry.get("message") or {}).get("content")))
-                    for notice in _NOTICE.findall(text if isinstance(text, str) else ""):
+                    found = _NOTICE.findall(text if isinstance(text, str) else "")
+                    content = (entry.get("message") or {}).get("content")
+                    if found and not (isinstance(content, list) and any(isinstance(c, Mapping) and c.get("type") == "tool_result" for c in content)):
+                        notice_lines.add(number)  # a notice entry, not a tool result that printed one
+                    for notice in found:
                         use = re.search(r"<tool-use-id>([^<]+)</tool-use-id>", notice)
                         at = _parse_iso_ms(entry["timestamp"])
                         if use and at is not None:
@@ -326,7 +331,7 @@ def _entries(path: Path, sidechain: bool) -> tuple[list[tuple[int, dict[str, Any
     except OSError as exc:
         warnings.append(f"could not read transcript: {exc}")
     entries.sort(key=lambda pair: pair[1]["timestamp"])
-    return entries, warnings, titles, notices
+    return entries, warnings, titles, notices, notice_lines
 
 
 def _input_summary(tool_input: Any) -> str:
@@ -338,7 +343,7 @@ def _input_summary(tool_input: Any) -> str:
 
 
 def _parse_transcript(path: Path, sidechain: bool) -> dict[str, Any]:
-    entries, warnings, titles, notices = _entries(path, sidechain)
+    entries, warnings, titles, notices, notice_lines = _entries(path, sidechain)
     turns: list[dict[str, Any]] = []
     events: list[dict[str, Any]] = []
     messages: list[dict[str, Any]] = []
@@ -434,7 +439,9 @@ def _parse_transcript(path: Path, sidechain: bool) -> dict[str, Any]:
         if turns:
             turns[-1]["endMs"] = at_ms
     events.extend(pending.values())
-    entry_times = sorted(at for at in (_parse_iso_ms(entry["timestamp"]) for _line, entry in entries) if at is not None)
+    # Notice entries (in a subagent's transcript) are not activity: another notice right
+    # after one must still count as coming while the session was quiet.
+    entry_times = sorted(at for at in (_parse_iso_ms(entry["timestamp"]) for line, entry in entries if line not in notice_lines) if at is not None)
     for tool_use_id, job in jobs.items():
         if tool_use_id in notices:
             at_ms, notice_line, notice = notices[tool_use_id]
