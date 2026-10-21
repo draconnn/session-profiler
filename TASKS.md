@@ -11,7 +11,7 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 - [x] Numbers match the old dashboard on session 0c06d6c0 (Claude Code) and Codex chat 01a14abf, apart from the two bug fixes; screenshots before/after.
 
 - [x] Publishable repo: Claude Code plugin (`.claude-plugin/`, `skills/session-profiler/`) next to the Codex skill, README, MIT licence; Claude Code reports kept out of `~/.codex` (`~/.cache/session-profiler/`).
-- [ ] Published as a public GitHub repo `draconnn/session-profiler`; plugin installs from it in a clean Claude Code config.
+- [x] Published as a public GitHub repo `draconnn/session-profiler`; plugin installs from it in a clean Claude Code config.
 
 ## Assumed
 - `timing.js` moves to `web/` unchanged apart from times shown in the viewer's own time zone (was hard-coded Europe/Warsaw).
