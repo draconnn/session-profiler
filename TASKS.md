@@ -24,5 +24,8 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 - A malformed `#session=` address (bad %-escape) leaves the page blank; catch the decode error in `web/app.js`.
 - A start-up-only Codex command whose record lands after its exec call's first output still shows 0 ms instead of unknown (1 case seen).
 - `launch.py` does not check the Host header on HEAD requests (only static page headers exposed).
+- A plain "was stopped" notice for a subagent's job that a timer killed (e.g. exactly 60 min after launch) is treated as cleanup, so two real 60-min jobs show an unknown end; consider a later notice for the same id, or round-hour caps.
+- In subagent transcripts the notice is itself an entry, so two cleanup notices a few ms apart could make the second look not-quiet and get a days-long end (no live case yet); leave notice entries out of `entry_times`.
+- The `duration_only` timing code has no label on the page.
 - A Codex command record written late can land inside the next exec call's window and take that call's span (seen once).
 - Publishing: one repo with both skill entries and one-command installs, README, MIT licence, synthetic test transcripts, demo session and screenshots, X post.
