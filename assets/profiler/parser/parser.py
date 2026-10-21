@@ -12,6 +12,7 @@ Public entry points are :func:`read_inventory`, :func:`analyze_session`, and
 from __future__ import annotations
 
 import argparse
+import bisect
 import datetime as _dt
 import json
 import math
@@ -30,6 +31,8 @@ MAX_MESSAGE_CHARS = 1200
 MAX_DETAIL_CHARS = 1200
 # The exec/wait output's own opening words, never text the script printed.
 _CELL_RUNNING = re.compile(r"\s*Script running with cell ID (\w+)")
+# Tool calls an exec script makes, e.g. tools.exec_command({...}).
+_TOOL_CALLS = re.compile(r"\btools\.(\w+)\s*\(")
 
 
 def _default_codex_home() -> Path:
@@ -898,6 +901,32 @@ def _parse_rollout(path: Path, metadata: Mapping[str, Any] | None = None) -> dic
                         claimed_native_commands.add(native_id)
                     break
 
+    # Codex records only the start-up time (under 1 ms) for many quick commands.
+    # A command whose exec script makes no other tool call took as long as that
+    # call, from the call to its first output. One that shares the script with
+    # other calls (including unrecorded ones such as write_stdin polls) has an
+    # unknown duration.
+    native_indexes = [index for index, _item in native_index_records]
+    exec_span_by_item: dict[str, tuple[int, int]] = {}
+    shared_exec_items: set[str] = set()
+    for wrapper in wrapper_indexes:
+        output = first_output_by_call.get(wrapper["call_id"])
+        call_ms = wrapper["record"].get("timestamp_ms")
+        output_ms = output["record"].get("timestamp_ms") if output else None
+        if wrapper["record"]["payload"].get("name") != "exec" or call_ms is None or output_ms is None or output_ms < call_ms:
+            continue
+        low = bisect.bisect_right(native_indexes, wrapper["index"])
+        high = bisect.bisect_right(native_indexes, output["index"])
+        actions = [item for _index, item in native_index_records[low:high] if _is_native_action(str(item.get("type") or ""))]
+        for item in actions:
+            if str(item.get("type") or "") != "CommandExecution" or not item.get("id"):
+                continue
+            code = wrapper["record"]["payload"].get("input") or wrapper["record"]["payload"].get("arguments")
+            if len(actions) == 1 and _TOOL_CALLS.findall(code if isinstance(code, str) else "") == ["exec_command"]:
+                exec_span_by_item.setdefault(str(item["id"]), (call_ms, output_ms))
+            else:
+                shared_exec_items.add(str(item["id"]))
+
     # First pass: turn boundaries and native message/tool items.
     for record in records:
         top_type = record["record"].get("type")
@@ -958,6 +987,13 @@ def _parse_rollout(path: Path, metadata: Mapping[str, Any] | None = None) -> dic
             continue
         seen_native.add(item_id)
         start_ms, end_ms, duration_ms, timing = _event_times(item, payload, record["timestamp_ms"])
+        recorded = _duration_ms(item.get("duration"))
+        if item_type == "CommandExecution" and recorded is not None and recorded < 1:
+            if item_id in exec_span_by_item:
+                start_ms, end_ms = exec_span_by_item[item_id]
+                duration_ms, timing = end_ms - start_ms, "exec_span"
+            elif item_id in shared_exec_items:
+                end_ms, duration_ms, timing = None, None, "startup_only"
         source = _source(path, int(record["line"]), "event_msg:item_completed")
         if item_type in {"UserMessage", "AgentMessage"}:
             role = "user" if item_type == "UserMessage" else "assistant"

@@ -5,7 +5,7 @@ import {actionText,agentStats,clock,dateTime,duration,excerpt,groupKey,isJob,isW
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hue = e => e.kind==='compaction'?'compact':isJob(e)?'job':isWait(e)?'wait':'tool';
-const timingLabel = t => ({native_duration:'Recorded execution duration',native_interval:'Recorded start and end',native_timestamps:'Recorded start and end',recorded_duration:'Recorded execution duration',paired_timestamps:'Paired call and result timestamps',transcript_pair:'Paired call and result timestamps',notification_pair:'From launch to its completion notice',cell_pair:'From launch to the wait that saw it finish',exec_span:'From the exec call to its output (Codex recorded only the start-up time)',inferred:'Estimated from transcript timestamps'}[t]||t||'Timing provenance unavailable');
+const timingLabel = t => ({native_duration:'Recorded execution duration',native_interval:'Recorded start and end',native_timestamps:'Recorded start and end',recorded_duration:'Recorded execution duration',paired_timestamps:'Paired call and result timestamps',transcript_pair:'Paired call and result timestamps',notification_pair:'From launch to its completion notice',cell_pair:'From launch to the wait that saw it finish',exec_span:'From the exec call to its output (Codex recorded only the start-up time)',startup_only:'Unknown: Codex recorded only the start-up time, and the command shared its exec call with other actions',inferred:'Estimated from transcript timestamps'}[t]||t||'Timing provenance unavailable');
 const keyOf = e => `${e.agentId}\u001f${e.id}`;
 const PAGE = 40;
 

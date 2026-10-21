@@ -21,8 +21,10 @@ A Bash command run in the background (``run_in_background``, or moved there
 after its timeout) returns its ``tool_result`` at once; the work itself is a
 ``job`` event from the ``tool_use`` to the ``<task-notification>`` that names
 its ``tool-use-id`` (completed, failed, killed or stopped). A job with no
-notification stays open (unknown end). Background subagents are not jobs: they
-are timed from their own transcripts.
+notification stays open (unknown end), and so does one killed or stopped more than
+a minute after the transcript's last activity: the app closed it, so the notice
+is not when the work ended. Background subagents are not jobs: they are timed
+from their own transcripts.
 
 Side sessions the desktop app started from a session (start_session) are
 separate transcripts with no link inside them; ``side_session_links`` reads the
@@ -48,6 +50,9 @@ _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 # The tool_result's own opening words, never text a command printed.
 _BACKGROUND = re.compile(r"\s*(?:Command running in background with ID: (\w+)|Command did not complete within its \d+\w* timeout and was moved to the background \(ID: (\w+)\))")
 _NOTICE = re.compile(r"<task-notification>(.*?)</task-notification>", re.S)
+# A job killed or stopped this long after the session's last activity was ended by cleanup, not by the work.
+_CLEANUP_STATES = {"killed", "stopped"}
+_CLEANUP_GRACE_MS = 60_000
 _SUMMARY_KEYS = ("description", "command", "file_path", "pattern", "url", "query", "prompt", "action")
 
 
@@ -420,14 +425,21 @@ def _parse_transcript(path: Path, sidechain: bool) -> dict[str, Any]:
         if turns:
             turns[-1]["endMs"] = at_ms
     events.extend(pending.values())
+    last_activity = max((turn["endMs"] for turn in turns if turn.get("endMs") is not None), default=None)
     for tool_use_id, job in jobs.items():
         if tool_use_id in notices:
             at_ms, notice_line, notice = notices[tool_use_id]
             state = re.search(r"<status>([^<]+)</status>", notice)
             said = re.search(r"<summary>(.*?)</summary>", notice, re.S)
-            job.update(endMs=at_ms, durationMs=max(0, at_ms - job["startMs"]), timing="notification_pair",
-                       status=state.group(1).strip() if state else "completed", source={**job["source"], "endLine": notice_line})
+            status = state.group(1).strip() if state else "completed"
+            job["source"] = {**job["source"], "endLine": notice_line}
             job["detail"]["output"] = _clip(said.group(1).strip() if said else notice, MAX_DETAIL_CHARS)
+            if status in _CLEANUP_STATES and last_activity is not None and at_ms > last_activity + _CLEANUP_GRACE_MS:
+                # Killed or stopped after the session went quiet (the app closing leftover
+                # commands, possibly days later): the notice is not when the work ended.
+                job["status"] = f"{status} after the session went quiet; real end unknown"
+            else:
+                job.update(endMs=at_ms, durationMs=max(0, at_ms - job["startMs"]), timing="notification_pair", status=status)
         events.append(job)
     events.sort(key=lambda event: (event["startMs"] is None, event["startMs"] or 0))
     return {"turns": turns, "events": events, "messages": messages, "warnings": warnings, "titles": titles, "toolInputs": tool_inputs}

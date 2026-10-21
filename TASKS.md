@@ -6,9 +6,9 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 ## Milestones
 - [x] Standalone report page in `assets/profiler/web/` (plain HTML, CSS, JavaScript; no build step, no Node.js), with the same sections as today: top bar (session, prompt and agent pickers, Refresh), summary figures and background-jobs line, timeline (agent lanes, zoom 1-16x, legend, click to inspect), Time by action (click filters the explorer), Work detail panel (agent and action views, full command), Action explorer (search, filter, sort, show more, expandable "what it did"), timing definitions. Follows the system light/dark mode.
 - [x] `launch.py` and `scripts/profile_session.py` serve the page and `data/profile.json` directly; no plugin build, no Node.js; old runtimes upgrade cleanly; plugin template (`assets/profiler/app/`) deleted.
-- [ ] Bug: a background job killed or stopped after its session went quiet (e.g. by app cleanup days later) gets an unknown end instead of a duration to the kill notice (was 75 h).
-- [ ] Bug: Codex commands recorded with under 1 ms (start-up only, ~64% of commands) take the span of the exec call that ran them.
-- [ ] Numbers match the old dashboard on session 0c06d6c0 (Claude Code) and Codex chat 01a14abf, apart from the two bug fixes; screenshots before/after.
+- [x] Bug: a background job killed or stopped after its session went quiet (e.g. by app cleanup days later) gets an unknown end instead of a duration to the kill notice (was 75 h).
+- [x] Bug: Codex commands recorded with under 1 ms (start-up only, ~64% of commands) take the span of the exec call that ran them when that call ran nothing else; otherwise their duration is unknown.
+- [x] Numbers match the old dashboard on session 0c06d6c0 (Claude Code) and Codex chat 01a14abf, apart from the two bug fixes; screenshots before/after.
 
 ## Assumed
 - `timing.js` moves to `web/` unchanged apart from times shown in the viewer's own time zone (was hard-coded Europe/Warsaw).
