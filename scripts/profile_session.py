@@ -16,7 +16,6 @@ import sys
 import time
 from urllib.error import URLError
 from urllib.request import Request, urlopen
-import uuid
 
 SKILL = Path(__file__).resolve().parents[1]
 ASSETS = SKILL / 'assets/profiler'
@@ -92,22 +91,23 @@ def health(base, runtime):
         return False
     try:
         status = request_json(base + '/api/status', timeout=1)
-        return status.get('tool') == 'codex-session-profiler' and status.get('runtimePath') == str(runtime)
+        # 'codex-session-profiler' is the name older versions of this server reported.
+        return status.get('tool') in {'session-profiler', 'codex-session-profiler'} and status.get('runtimePath') == str(runtime)
     except (URLError, OSError, ValueError):
         return False
 
 
 def code_files(root):
-    # Code is everything the skill ships; the report snapshot, build output, data and server records stay with the runtime.
+    # Code is everything the skill ships; the report data and server records stay with the runtime.
     files = {}
     for folder, dirs, names in os.walk(root):
         base = Path(folder)
         rel_dir = base.relative_to(root).as_posix()
-        dirs[:] = [d for d in dirs if d not in {'__pycache__', 'node_modules'} and (base / d).relative_to(root).as_posix() not in {'data', 'app/dist'}]
+        dirs[:] = [d for d in dirs if d not in {'__pycache__', 'node_modules'} and (base / d).relative_to(root).as_posix() != 'data']
         for name in names:
             rel = (base / name).relative_to(root).as_posix()
             runtime_record = rel_dir == '.' and (name.startswith('server.') or name in {'.launch.lock', '.code-stamp'})
-            if not runtime_record and rel != 'app/src/data.json' and not name.endswith('.pyc'):
+            if not runtime_record and not name.endswith('.pyc'):
                 files[rel] = base / name
     return files
 
@@ -156,9 +156,8 @@ def prepare(runtime):
     for rel, path in sources.items():
         (runtime / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, runtime / rel)
-    target = runtime / 'app/src/data.json'
-    if not target.exists():
-        target.write_text(json.dumps({'id': 'dashboard:' + str(uuid.uuid4()), 'surface': 'dashboard', 'queries': {}}) + '\n')
+    # Runtimes made by versions that built the page with the Data Analytics plugin keep its folder; it is no longer used.
+    shutil.rmtree(runtime / 'app', ignore_errors=True)
     stamp_path.write_text(stamp + '\n')
 
 
@@ -179,7 +178,7 @@ def launch(runtime, root):
         raise RuntimeError('Report build failed: ' + (built.stderr or built.stdout)[-5000:])
     log_path = runtime / 'server.log'
     with log_path.open('w') as log:
-        process = subprocess.Popen(command + ['--no-build'], cwd=runtime, stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
+        process = subprocess.Popen(command + ['--no-refresh'], cwd=runtime, stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
     deadline = time.monotonic() + 25
     while time.monotonic() < deadline:
         output = log_path.read_text(errors='replace')
@@ -272,7 +271,7 @@ def main():
         base, reused = launch(runtime, root)
         profile_path = runtime / 'data/profile.json'
         profile = json.loads(profile_path.read_text())
-    print(json.dumps({'ok': True, 'selectedId': selected, 'rootId': root, 'url': base + '/?view=1&tab=dashboard',
+    print(json.dumps({'ok': True, 'selectedId': selected, 'rootId': root, 'url': base + '/',
                       'reusedServer': reused, 'profilePath': str(profile_path), 'summary': summarize(profile, root)}, ensure_ascii=False))
     return 0
 

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Session profiler</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="sp-bar"><strong>Session profiler</strong><span id="generated"></span></header>
+<main class="sp-app" id="app">
+  <div class="sp-controls">
+    <label class="sp-field sp-session-select"><span>Session</span><select id="session"></select></label>
+    <label class="sp-field"><span>Prompt</span><select id="turn"></select></label>
+    <label class="sp-field"><span>Agent</span><select id="agent"></select></label>
+    <button type="button" class="sp-button" id="refresh">Refresh logs</button>
+  </div>
+  <p class="sp-notice" id="notice" role="status" hidden></p>
+  <div id="heading"></div>
+  <section id="summary" aria-label="Session timing"></section>
+  <div class="sp-workspace">
+    <div class="sp-evidence">
+      <section class="sp-card">
+        <div class="sp-card-head"><h2>Where the time went</h2><p>Each lane is an agent. Thick bars show active turns; thin bars below show tool calls, with simultaneous calls stacked. Dotted lines span agent lifetimes including idle gaps. Zoom changes the viewport only.</p></div>
+        <div id="timeline"></div>
+      </section>
+      <section class="sp-card">
+        <div class="sp-card-head"><h2>Time by action</h2><p>Execution durations summed by action; background jobs (hatched) by their purpose, from launch to completion. Parallel calls count separately. Click a row to filter the action explorer. Unknown durations are left out of the sum and counted separately.</p></div>
+        <div id="ranking"></div>
+      </section>
+    </div>
+    <aside class="sp-inspector sp-card" id="inspector-card">
+      <div class="sp-card-head"><h2>Work detail</h2></div>
+      <div id="inspector"></div>
+    </aside>
+  </div>
+  <section class="sp-card sp-explorer">
+    <div class="sp-card-head sp-explorer-head">
+      <h2>Action explorer</h2>
+      <div class="sp-explorer-controls">
+        <input class="sp-search" id="search" type="search" placeholder="Search actions or commands" aria-label="Search actions or commands">
+        <label class="sp-field sp-inline"><span class="sp-visually-hidden">Action</span><select id="filter"></select></label>
+        <label class="sp-field sp-inline"><span class="sp-visually-hidden">Sort</span><select id="sort"><option value="duration">Slowest first</option><option value="time">Chronological</option></select></label>
+      </div>
+    </div>
+    <div id="explorer"></div>
+  </section>
+  <details class="sp-methods" id="methods"></details>
+</main>
+<div class="sp-tooltip" id="tip" role="tooltip" hidden></div>
+<dialog class="sp-dialog" id="command-dialog" aria-labelledby="command-title">
+  <div class="sp-dialog-head"><h2 id="command-title">Full command</h2><button type="button" class="sp-button" id="command-close">Close</button></div>
+  <pre class="sp-full-command" id="command-text"></pre>
+</dialog>
+</body>
+</html>
