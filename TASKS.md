@@ -6,7 +6,7 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 ## Milestones
 - [x] Standalone report page in `assets/profiler/web/` (plain HTML, CSS, JavaScript; no build step, no Node.js), with the same sections as today: top bar (session, prompt and agent pickers, Refresh), summary figures and background-jobs line, timeline (agent lanes, zoom 1-16x, legend, click to inspect), Time by action (click filters the explorer), Work detail panel (agent and action views, full command), Action explorer (search, filter, sort, show more, expandable "what it did"), timing definitions. Follows the system light/dark mode.
 - [x] `launch.py` and `scripts/profile_session.py` serve the page and `data/profile.json` directly; no plugin build, no Node.js; old runtimes upgrade cleanly; plugin template (`assets/profiler/app/`) deleted.
-- [x] Bug: a background job killed or stopped while its session was quiet (more than a minute after the transcript's previous entry, e.g. by app cleanup days later) gets an unknown end instead of a duration to the kill notice (was 75 h).
+- [x] Bug: a killed or stopped background job whose notice is not when its work ended (the notice says it outlived its session, or gives no reason and came while the session was quiet, e.g. app cleanup days later) gets an unknown end instead of a duration to the notice (was 75 h). Notices naming the user, the main session, Claude or the time limit keep their real end.
 - [x] Bug: Codex commands recorded with under 1 ms (start-up only, ~64% of commands) take the span of the exec call that ran them when that call ran nothing else; otherwise their duration is unknown.
 - [x] Numbers match the old dashboard on session 0c06d6c0 (Claude Code) and Codex chat 01a14abf, apart from the two bug fixes; screenshots before/after.
 
@@ -24,4 +24,5 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 - A malformed `#session=` address (bad %-escape) leaves the page blank; catch the decode error in `web/app.js`.
 - A start-up-only Codex command whose record lands after its exec call's first output still shows 0 ms instead of unknown (1 case seen).
 - `launch.py` does not check the Host header on HEAD requests (only static page headers exposed).
+- A Codex command record written late can land inside the next exec call's window and take that call's span (seen once).
 - Publishing: one repo with both skill entries and one-command installs, README, MIT licence, synthetic test transcripts, demo session and screenshots, X post.

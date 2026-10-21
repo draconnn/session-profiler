@@ -21,9 +21,10 @@ A Bash command run in the background (``run_in_background``, or moved there
 after its timeout) returns its ``tool_result`` at once; the work itself is a
 ``job`` event from the ``tool_use`` to the ``<task-notification>`` that names
 its ``tool-use-id`` (completed, failed, killed or stopped). A job with no
-notification stays open (unknown end), and so does one killed or stopped more than
-a minute after the transcript's previous entry: it was closed while the session was
-quiet (e.g. by the app, possibly days later), so the notice is not when the work ended. Background subagents are not jobs: they are timed
+notification stays open (unknown end), and so does a killed or stopped one whose notice
+is not when the work ended: it says the job outlived its session, or it gives no reason
+and came more than a minute after the transcript's previous entry (the app closing it
+while the session was quiet, possibly days later). Background subagents are not jobs: they are timed
 from their own transcripts.
 
 Side sessions the desktop app started from a session (start_session) are
@@ -51,8 +52,15 @@ _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 # The tool_result's own opening words, never text a command printed.
 _BACKGROUND = re.compile(r"\s*(?:Command running in background with ID: (\w+)|Command did not complete within its \d+\w* timeout and was moved to the background \(ID: (\w+)\))")
 _NOTICE = re.compile(r"<task-notification>(.*?)</task-notification>", re.S)
-# A job killed or stopped this long after the transcript's previous entry was ended while the session was quiet, not by the work.
+# When a killed or stopped job's notice is not when its work ended:
+# - the notice says the job outlived its session (sent when a later session starts);
+# - or it gives no reason and came more than a minute after the transcript's previous
+#   entry (the app closing it while the session was quiet, possibly days later).
+# A notice that names who or what stopped it (the user, the main session, Claude, the
+# background time limit) is a real end.
 _CLEANUP_STATES = {"killed", "stopped"}
+_OUTLIVED_SESSION = re.compile(r"didn't finish before the previous session ended|No completion record was found", re.I)
+_NAMED_STOP = re.compile(r"stopped by (?:the )?(?:user|main session|Claude)|background time limit", re.I)
 _CLEANUP_GRACE_MS = 60_000
 _SUMMARY_KEYS = ("description", "command", "file_path", "pattern", "url", "query", "prompt", "action")
 
@@ -435,12 +443,13 @@ def _parse_transcript(path: Path, sidechain: bool) -> dict[str, Any]:
             status = state.group(1).strip() if state else "completed"
             job["source"] = {**job["source"], "endLine": notice_line}
             job["detail"]["output"] = _clip(said.group(1).strip() if said else notice, MAX_DETAIL_CHARS)
+            reason = said.group(1) if said else notice
             before = bisect.bisect_left(entry_times, at_ms)
             quiet = before > 0 and at_ms - entry_times[before - 1] > _CLEANUP_GRACE_MS
-            if status in _CLEANUP_STATES and quiet:
-                # Killed or stopped while the session was quiet (e.g. the app closing leftover
-                # commands, possibly days later): the notice is not when the work ended.
-                job["status"] = f"{status} after the session went quiet; real end unknown"
+            if status in _CLEANUP_STATES and _OUTLIVED_SESSION.search(reason):
+                job["status"] = f"{status}: did not finish before its session ended; real end unknown"
+            elif status in _CLEANUP_STATES and quiet and not _NAMED_STOP.search(reason):
+                job["status"] = f"{status} while the session was quiet; real end unknown"
             else:
                 job.update(endMs=at_ms, durationMs=max(0, at_ms - job["startMs"]), timing="notification_pair", status=status)
         events.append(job)
