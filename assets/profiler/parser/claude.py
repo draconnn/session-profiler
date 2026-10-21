@@ -22,8 +22,8 @@ after its timeout) returns its ``tool_result`` at once; the work itself is a
 ``job`` event from the ``tool_use`` to the ``<task-notification>`` that names
 its ``tool-use-id`` (completed, failed, killed or stopped). A job with no
 notification stays open (unknown end), and so does one killed or stopped more than
-a minute after the transcript's last activity: the app closed it, so the notice
-is not when the work ended. Background subagents are not jobs: they are timed
+a minute after the transcript's previous entry: it was closed while the session was
+quiet (e.g. by the app, possibly days later), so the notice is not when the work ended. Background subagents are not jobs: they are timed
 from their own transcripts.
 
 Side sessions the desktop app started from a session (start_session) are
@@ -34,6 +34,7 @@ agents with their own turns, tools, waits and subagents.
 
 from __future__ import annotations
 
+import bisect
 import json
 import os
 import re
@@ -50,7 +51,7 @@ _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 # The tool_result's own opening words, never text a command printed.
 _BACKGROUND = re.compile(r"\s*(?:Command running in background with ID: (\w+)|Command did not complete within its \d+\w* timeout and was moved to the background \(ID: (\w+)\))")
 _NOTICE = re.compile(r"<task-notification>(.*?)</task-notification>", re.S)
-# A job killed or stopped this long after the session's last activity was ended by cleanup, not by the work.
+# A job killed or stopped this long after the transcript's previous entry was ended while the session was quiet, not by the work.
 _CLEANUP_STATES = {"killed", "stopped"}
 _CLEANUP_GRACE_MS = 60_000
 _SUMMARY_KEYS = ("description", "command", "file_path", "pattern", "url", "query", "prompt", "action")
@@ -425,7 +426,7 @@ def _parse_transcript(path: Path, sidechain: bool) -> dict[str, Any]:
         if turns:
             turns[-1]["endMs"] = at_ms
     events.extend(pending.values())
-    last_activity = max((turn["endMs"] for turn in turns if turn.get("endMs") is not None), default=None)
+    entry_times = sorted(at for at in (_parse_iso_ms(entry["timestamp"]) for _line, entry in entries) if at is not None)
     for tool_use_id, job in jobs.items():
         if tool_use_id in notices:
             at_ms, notice_line, notice = notices[tool_use_id]
@@ -434,8 +435,10 @@ def _parse_transcript(path: Path, sidechain: bool) -> dict[str, Any]:
             status = state.group(1).strip() if state else "completed"
             job["source"] = {**job["source"], "endLine": notice_line}
             job["detail"]["output"] = _clip(said.group(1).strip() if said else notice, MAX_DETAIL_CHARS)
-            if status in _CLEANUP_STATES and last_activity is not None and at_ms > last_activity + _CLEANUP_GRACE_MS:
-                # Killed or stopped after the session went quiet (the app closing leftover
+            before = bisect.bisect_left(entry_times, at_ms)
+            quiet = before > 0 and at_ms - entry_times[before - 1] > _CLEANUP_GRACE_MS
+            if status in _CLEANUP_STATES and quiet:
+                # Killed or stopped while the session was quiet (e.g. the app closing leftover
                 # commands, possibly days later): the notice is not when the work ended.
                 job["status"] = f"{status} after the session went quiet; real end unknown"
             else:
