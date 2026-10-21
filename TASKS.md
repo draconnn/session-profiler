@@ -13,6 +13,8 @@ The profiler's report page runs without any code from the Codex Data Analytics p
 - [x] Publishable repo: Claude Code plugin (`.claude-plugin/`, `skills/session-profiler/`) next to the Codex skill, README, MIT licence; Claude Code reports kept out of `~/.codex` (`~/.cache/session-profiler/`).
 - [x] Published as a public GitHub repo `draconnn/session-profiler`; plugin installs from it in a clean Claude Code config.
 
+- [x] Codex plugin (`.codex-plugin/`, `.agents/plugins/marketplace.json`) next to the Claude Code plugin; one shared skill in `skills/session-profiler/` (root `SKILL.md` removed, so a Codex clone no longer lists two skills); helper `--source auto` follows the running tool.
+
 ## Assumed
 - `timing.js` moves to `web/` unchanged apart from times shown in the viewer's own time zone (was hard-coded Europe/Warsaw).
 - Plugin-only extras are dropped: Publish, Ask ChatGPT, edit pencil, card menus (export, links), card dragging.

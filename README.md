@@ -29,17 +29,26 @@ claude plugin marketplace add draconnn/session-profiler
 claude plugin install session-profiler@session-profiler
 ```
 
-### Codex (skill)
+### Codex (plugin)
+
+```bash
+codex plugin marketplace add draconnn/session-profiler
+codex plugin add session-profiler@session-profiler
+```
+
+Or, as a plain skill, clone the repository into your Codex skills folder:
 
 ```bash
 git clone https://github.com/draconnn/session-profiler ~/.codex/skills/session-profiler
 ```
 
+Install it one way, not both, or Codex lists the skill twice.
+
 ## Use
 
-Ask the agent to profile the session, for example "profile this session" or "why did this chat take so long?". In Claude Code you can also run `/session-profiler:session-profiler`; in Codex, `$session-profiler`.
+Ask the agent to profile the session, for example "profile this session" or "why did this chat take so long?". You can also call it by name: `/session-profiler:session-profiler` in Claude Code, `$session-profiler` in Codex. The same skill runs in both and reads the history of the tool it runs in.
 
-The agent runs the bundled helper, opens the report (in the Claude desktop app's built-in browser, or as a link) and explains the biggest time sinks. The report has a session picker and a Refresh button, so you can switch sessions or update an ongoing one without asking again.
+The agent runs the bundled helper, opens the report (in the Codex app, in the Claude desktop app's built-in browser, or as a link) and explains the biggest time sinks. The report has a session picker and a Refresh button, so you can switch sessions or update an ongoing one without asking again.
 
 You can also run the helper yourself:
 
@@ -48,6 +57,8 @@ python3 scripts/profile_session.py --source claude --list --query "part of the t
 python3 scripts/profile_session.py --source claude --session SESSION_UUID
 python3 scripts/profile_session.py --source codex --session CHAT_UUID
 ```
+
+`--source` defaults to `auto`: Claude Code history when run inside Claude Code, Codex history inside Codex, and both elsewhere.
 
 It prints JSON with the report `url`, a `summary` and the path to the full data (`profilePath`).
 
@@ -78,6 +89,19 @@ Reports are written to `~/.cache/session-profiler/` for Claude Code and to `$COD
 ## Limitations
 
 The log formats it reads are not documented and can change with any app update. It was built and tested in October 2026 against Claude Code 2.1.280 and the Codex desktop app of that month. If a newer version changes the logs, parts of a report may come out empty or wrong. Please open an issue with the app version.
+
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| `skills/session-profiler/SKILL.md` | The skill, shared by Claude Code and Codex |
+| `scripts/profile_session.py` | Helper the skill runs: picks the session, builds the report, starts the local server |
+| `assets/profiler/parser/` | Log readers for Codex (`parser.py`) and Claude Code (`claude.py`) |
+| `assets/profiler/web/` | The report page: plain HTML, CSS and JavaScript |
+| `.claude-plugin/` | Claude Code plugin and marketplace manifests |
+| `.codex-plugin/`, `.agents/plugins/` | Codex plugin and marketplace manifests |
+
+The timing helpers have tests: `node --test assets/profiler/web/timing.test.mjs` (Node.js is needed only for the tests).
 
 ## Licence
 

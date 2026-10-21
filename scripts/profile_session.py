@@ -244,6 +244,16 @@ def summarize(profile, root):
     }
 
 
+def resolve_source(source, env):
+    # 'auto' reads the history of the tool running the helper, told apart by the session
+    # variable each one sets; with neither or both set it reads both.
+    if source != 'auto':
+        return source
+    claude = bool(env.get('CLAUDE_CODE_SESSION_ID'))
+    codex = any(env.get(key) for key in CURRENT_ENV['codex'])
+    return 'claude' if claude and not codex else 'codex' if codex and not claude else 'all'
+
+
 def runtime_root(source):
     # Where report runtimes live. Codex chats keep Codex's own temp folder; other sources use
     # a cache folder so Claude Code users don't get a ~/.codex folder. SESSION_PROFILER_HOME overrides both.
@@ -262,9 +272,10 @@ def main():
     select_group.add_argument('--session', default='current', help='current, a UUID, or a Codex chat link')
     select_group.add_argument('--query', help='exact or partial chat title; ambiguous matches return candidates')
     cli.add_argument('--list', action='store_true', help='list matching top-level chats without launching')
-    cli.add_argument('--source', choices=('codex', 'claude', 'all'), default=os.environ.get('SESSION_PROFILER_SOURCE', 'codex'),
-                     help='history to read: Codex (default), Claude Code, or both')
+    cli.add_argument('--source', choices=('auto', 'codex', 'claude', 'all'), default=os.environ.get('SESSION_PROFILER_SOURCE', 'auto'),
+                     help='history to read: auto (default: the tool running this), Codex, Claude Code, or both')
     args = cli.parse_args()
+    args.source = resolve_source(args.source, os.environ)
     # The parser, launcher and server all read this, so the choice follows them.
     os.environ['SESSION_PROFILER_SOURCE'] = args.source
     rows = read_inventory()
