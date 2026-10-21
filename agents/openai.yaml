@@ -1,0 +1,6 @@
+interface:
+  display_name: "Session Profiler"
+  short_description: "Find session bottlenecks across agents and tools"
+  default_prompt: "Use $session-profiler to analyze this session's timing and open its interactive timeline."
+policy:
+  allow_implicit_invocation: true

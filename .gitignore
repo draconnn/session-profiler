@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.DS_Store
+# OpenAI Data Analytics plugin template (proprietary); never commit, being replaced by web/
+assets/profiler/app/
